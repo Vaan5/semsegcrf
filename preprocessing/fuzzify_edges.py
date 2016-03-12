@@ -4,13 +4,27 @@ import numpy as np
 import matplotlib.pyplot as plt
 import kitti_labels
 
+def save_prob_map(prob_img):
+    with open("file.txt", "w") as f:
+        for i in xrange(prob_img.shape[0]):
+            for j in xrange(prob_img.shape[1]):
+                sum_ = np.sum(prob_img[i,j,:])
+                print i, j
+                print prob_img[i,j,:]
+                prob_img[i,j,:] /= sum_
+                print prob_img[i,j,:]
+                f.write(str(prob_img[i,j,:]) + "\n")
+
+
 def load_image(path):
     img = Image.open(args.input_img)
     return np.array(img)
 
 def find_edges(img):
+    changed = np.copy(img)
+    im2 = np.copy(img)
     img = np.apply_along_axis(kitti_labels.getLabel, 2, img)
-    prob_img = np.zeros((img.shape[0], img.shape[1], kitti_labels.NUMBER_OF_LABELS)).astype(np.uint8)
+    prob_img = np.zeros((img.shape[0], img.shape[1], kitti_labels.NUMBER_OF_LABELS))
 
     # iterate through image and look at top and right neighbours (8-neighbourhood)
     for i in xrange(img.shape[0]):
@@ -23,6 +37,8 @@ def find_edges(img):
                 prob_img[i,j,:] = 16
                 print prob_img[i,j]
                 continue
+
+            prob_img[i,j,current_pixel] = 16
 
             # check right
             n_i = i
@@ -38,12 +54,13 @@ def find_edges(img):
                     counter += 1
 
                 positions = list(reversed(positions))
-                index = n_j
-                counter = 0
-                while index < img.shape[1] and img[i, index] == img[n_i, n_j] and counter < 8:
-                    positions.append(index)
-                    index += 1
-                    counter += 1
+                if img[n_i, n_j] not in kitti_labels.DONT_CARE_LABELS:
+                    index = n_j
+                    counter = 0
+                    while index < img.shape[1] and img[i, index] == img[n_i, n_j] and counter < 8:
+                        positions.append(index)
+                        index += 1
+                        counter += 1
 
                 num = len(positions)
                 delta = int(16 / num)
@@ -51,6 +68,7 @@ def find_edges(img):
                 in1 = 16
                 in2 = 16 - delta * num
                 for ind in positions:
+                    changed[i, ind, :] = (0,0,0)
                     prob_img[i, ind, current_pixel] = in1
                     if img[n_i, n_j] not in kitti_labels.DONT_CARE_LABELS:
                         prob_img[i, ind, img[n_i, n_j]] = in2
@@ -64,11 +82,15 @@ def find_edges(img):
                     print ind
                     print prob_img[n_i, ind, :]
 
-                break
-
             # check top
             # check top right
             # check top left
+
+    plt.imshow(changed)
+    plt.figure()
+    plt.imshow(im2)
+    plt.show()
+    save_prob_map(prob_img)
 
 def main(args):
     img = load_image(args.input_img)
