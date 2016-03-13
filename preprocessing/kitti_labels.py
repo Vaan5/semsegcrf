@@ -1,7 +1,7 @@
 NUMBER_OF_LABELS = 11
 DONT_CARE_LABELS = [11]
 
-def getLabel(c):
+def get_label(c):
     r = c[0]
     g = c[1]
     b = c[2]
